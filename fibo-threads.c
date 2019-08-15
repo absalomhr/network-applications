@@ -2,84 +2,100 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+/*
+	This program receives a number of threads to be created and
+	a value for each thread.
+	Then each thread will generate and store in an array the fibonacci
+	sequence up to the received value or the inmediate previous value
+	in the sequence. The main program will print each generated array.
+*/
+
+/* Structure sent to each thread as argument */
 typedef struct {
-	int value;
-	pthread_t * thread_id;
+	int value; // value sent to the thread
+	pthread_t * thread_id; // the thread id
 
-	int * res_arr;
-	int size;
-} node;
+	int * res_arr; // address where the generated array will be stored
+	int size; // size of the generated array
+} Node;
 
-void * fibo_hilos (void * arg){
-	node * a = (node *) arg;
-	int value = a -> value;
-	long * thread_id = a -> thread_id;
-	printf("Yo soy el hilo: %ld, ", * thread_id);
-	printf("mi valor: %d\n", value);
-	
+/*
+	Function that each thread executes. It will generate
+	values from the fibonacci sequence up to the value passed
+	to the thread.
+ */
+void * fibonacci_thread (void * arg){
+	Node * node = (Node *) arg;
+	int value = node -> value;
+	long * thread_id = node -> thread_id;
+	printf("I'm the thread: %ld, ", * thread_id);
+	printf("I received the value: %d\n", value);
+
+	// Case where the passed values is negative
+	if (value < 0){
+		node -> res_arr = NULL;
+		pthread_exit(NULL);
+	}
 	int * res_arr = (int *)malloc(sizeof(int)*2);
 	res_arr[0] = 0;
 	if (value == 0){
-		a -> size = 1;
-		a -> res_arr = res_arr;
+		node -> size = 1;
+		node -> res_arr = res_arr;
 		pthread_exit(NULL);
 	}
 	res_arr[1] = 1;
-	int prim = 0, seg = 1, size = 2, ind1 = 0, ind2 = 1, nuevo;
-	
-	while (1){
-		nuevo = res_arr[ind1] + res_arr[ind2];
-		if (nuevo > value){
+	// Generating the fibonacci sequence
+	int size = 2, f_index = 0, s_index = 1, new_v;
+	while (1) {
+		new_v = res_arr[f_index] + res_arr[s_index];
+		// If the number in the sequence is greater than
+		// the limit value, we stop generating
+		if (new_v > value){
 			break;
-		} else {
-			res_arr =(int *) realloc(res_arr, sizeof(int)*size + 1);
-			res_arr[size] = nuevo;
-
-			size++;
-
-			ind1++; ind2++;
-
-			prim = seg;
-			seg = nuevo;
+		}
+		else {
+			res_arr = (int *)realloc(res_arr, sizeof(int)*size + 1);
+			res_arr[size] = new_v;
+			size++; f_index++; s_index++;
 		}
 	}
-	
-	a -> size = size;
-	a -> res_arr = res_arr;
-
+	node -> size = size;
+	node -> res_arr = res_arr;
 	pthread_exit(NULL);
 }
 
+
 int main () {
 	int n, d;
-	pthread_t * hilos;
-	node * args;
-	printf("Escribe cuantos hilos quieres: \n");
+	pthread_t * threads;
+	Node * args; // Array of arguments for each thread
+	printf("How many threads do you want?: \n");
 	scanf("%d", &n);
 	printf("\n");
 	fflush(stdin);
 
-	hilos = (pthread_t *)malloc(sizeof(pthread_t)*n);
-	args = (node *)malloc(sizeof(node)*n);
+	threads = (pthread_t *)malloc(sizeof(pthread_t)*n);
+	args = (Node *)malloc(sizeof(Node)*n);
 
-	printf("Introduce los valores para cada hilo\n");
+	printf("Enter the value for each thread\n");
 	for (int i = 0; i < n; i++){
 		scanf("%d", &d);
 		fflush(stdin);
 		args [i].value = d;
-		args [i].thread_id = &hilos[i];
+		args [i].thread_id = &threads[i];
 	}
 	printf("\n");
+	// Creating the threads
 	for (int i = 0; i < n; i++){
-		pthread_create(args[i].thread_id, NULL, fibo_hilos, (void *)&args[i]);
+		pthread_create(args[i].thread_id, NULL, fibonacci_thread, (void *)&args[i]);
 	}
-
-
+	// Waiting for each thread to finish its execution
+	// and printing the resulting array
 	for (int i = 0; i < n; i++){
 		pthread_join(* args[i].thread_id, NULL);
 		printf("\n");
-		printf("Arreglo: %d,", i + 1);
-		printf(" del hilo: %ld\n", * (long *)args[i].thread_id);
+		printf("Array: %d,", i + 1);
+		printf(" from thread: %ld\n", * (long *)args[i].thread_id);
 		for(int j = 0; j < args[i].size; j++){
 			printf("%d ", args[i].res_arr[j]);
 		}
