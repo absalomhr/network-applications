@@ -60,6 +60,13 @@ void * pseudo_sort (void * arg){
 		left++; right--;
 	}
 
+	printf("Im the thread: %ld\n", (long)pthread_self());
+	printf("This is my resulting array:\n");
+	for(int i = b_index; i <= e_index; i++){
+		printf("%d ", arr[i]);
+	}
+	printf("\n\n");
+
 	// Threads
 	int t1_created = -1, t2_created = -1;
 	pthread_t t1, t2;
@@ -95,17 +102,17 @@ int main () {
 		arr[i] = rand() % 100 + 1; // random number between 1 and 100
 	}
 
-	printf("BEFORE:\n");
+	printf("BEFORE:\n\n");
 	for (int i = 0; i < n; i++){
 		printf("%d ", arr[i]);
 	}
 	printf("\n\n");
 	int args [2] = {0, n - 1};
 	pseudo_sort((void *)args);
-	printf("AFTER:\n");
+	printf("\nAFTER:\n\n");
 	for (int i = 0; i < n; i++){
 		printf("%d ", arr[i]);
-	}
+	}printf("\n");
 
 	// is the array sorted?
 	/*for (int i = 0; i < n - 1; i++){

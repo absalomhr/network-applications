@@ -26,9 +26,11 @@ def only_words(text_list):
             new_tokens.append(clean_token)
     return new_tokens
 
-def thread_work(filename, results, i):
+def thread_work(filename, results, index):
+    # print(index)
+    results[index] = []
 
-    f = open(filename, encoding='utf-8')
+    f = open(filename, encoding='latin-1')
     raw_text = f.read()
 
     # Make the text lowercase
@@ -37,33 +39,56 @@ def thread_work(filename, results, i):
     # Tokenizing the text
     text_list = tokenize_text(clean_text)
 
-    # Getting rid of urls
-    #$text_list = delete_urls(text_list)
-
     # Getting rid of punctuation
     text_list = only_words(text_list)
     total_words = len(text_list)
 
-    res_str = "Thread: " +  str(current_thread().ident) + "\n"
-    res_str += "File: " + os.path.basename(filename) + ", Total words: " + str(total_words) + "\n"
-
     for w in words:
-        c = text_list.count(w)
-        res_str += "Word: " + w + ", Count: " + str(c) + ", Percent: " + str((c / total_words)*100) + "%" + "\n"
-    res_str += "\n\n"
-    results[i] = res_str
+        results[index].append(str(text_list.count(w)))
+
+    results[index].append(str(get_ident()))
+    results[index].append(os.path.basename(filename))
+    results[index].append(str(total_words))
+
 
 # Method called when selecting file button 
 def file_clicked():
     # Getting the file path and name
     filename = filedialog.askopenfilename()
 
+    if type(filename) != type(""):
+        return False
+
     # Thread
-    results = [""]
+    results = [[]]
 
     thread = Thread(target=thread_work, args=(filename, results, 0))
     thread.start()
     thread.join()
+
+    file_res = ""
+    summary = ""
+    total_words_all = 0
+    total_counts = [0] * len(words)
+
+    
+    file_res += "Thread: " + results[0][-3] + "\n"
+    file_res += "File: " + results[0][-2] + "\n"
+    file_res += "Words count: " + results[0][-1] + "\n"
+    total_words_all += int(results[0][-1])
+
+    for j in range(len(words)):
+        file_res += words[j] + ": " + results[0][j] + "\n"
+        total_counts[j] += int(results[0][j])
+    file_res += "\n\n\n"
+
+    summary = "Total number of words: " + str(total_words_all) + "\n"
+    for j in range(len(words)):
+        if total_counts[j] == 0:
+            summary += words[j] + ": " + "{0:.1f}".format((total_counts[j] / total_words_all) * 100) + "%" +"\n"
+        else:
+            summary += words[j] + ": " + "{0:.3f}".format((total_counts[j] / total_words_all) * 100) + "%" +"\n"
+
 
     # Creating new window for showing results
     t = Toplevel(window)
@@ -83,15 +108,71 @@ def file_clicked():
     edit_space.pack(fill='both', expand=True, padx=8, pady=8)
 
     # Writing to the text area
-    edit_space.insert('insert', (results[0] + "\n"))
+    edit_space.insert('insert', (file_res+summary))
     # Disabling the text area so the user cant edit the text
     edit_space.config(state="disabled")
     t.mainloop()
 
 # Method called when selecting directory button
 def dir_clicked():
+    import glob
+    import os
+
     # Getting the dir path and name
     dirname = filedialog.askdirectory()
+
+    if dirname == '':
+        return False
+    
+    os.chdir(r''+dirname+'')
+    myFiles = glob.glob('*.txt')
+
+    n_files = len(myFiles)
+
+    if (n_files == 0):
+        return False
+
+    results = [[]] * n_files
+    threads = []
+
+    for i in range(n_files):
+        threads.append(Thread(target=thread_work, args=(myFiles[i], results, i)))
+
+    for i in range(n_files):
+        threads[i].start()
+
+    for i in range(n_files):
+        threads[i].join()
+
+
+    # Results is a list of lists
+    # Each list has the following structure:
+
+    #[each_word_count..., thread_name, file_name, file_size]
+
+    file_res = ""
+    summary = ""
+    total_words_all = 0
+    total_counts = [0] * len(words)
+
+    for i in range(n_files):
+        file_res += "Thread: " + results[i][-3] + "\n"
+        file_res += "File: " + results[i][-2] + "\n"
+        file_res += "Words count: " + results[i][-1] + "\n"
+        total_words_all += int(results[i][-1])
+
+        for j in range(len(words)):
+            file_res += words[j] + ": " + results[i][j] + "\n"
+            total_counts[j] += int(results[i][j])
+        file_res += "\n\n\n"
+
+    summary = "Total number of words: " + str(total_words_all) + "\n"
+    for j in range(len(words)):
+        if total_counts[j] == 0:
+            summary += words[j] + ": " + "{0:.1f}".format((total_counts[j] / total_words_all) * 100) + "%" +"\n"
+        else:
+            summary += words[j] + ": " + "{0:.3f}".format((total_counts[j] / total_words_all) * 100) + "%" +"\n"
+
     # Creating new window for showing results
     t = Toplevel(window)
     # Frame for the text
@@ -108,16 +189,13 @@ def dir_clicked():
     )
     # Showing the text area
     edit_space.pack(fill='both', expand=True, padx=8, pady=8)
-    # Inserting the text to the text area
-
-    # Hilos van aqui we
-    #result = resultado del analisis en forma de cadena a huevo 
 
     # Writing to the text area
-    edit_space.insert('insert', dirname + "\n")
+    edit_space.insert('insert', file_res + summary)
     # Disabling the text area so the user cant edit the text
     edit_space.config(state="disabled")
     t.mainloop()
+    
 
 # Main window
 window = Tk()
