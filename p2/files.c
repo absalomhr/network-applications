@@ -12,7 +12,7 @@
 #define CRITICAL_SECTIONS 7
 #define SEMAPHORES_N CRITICAL_SECTIONS * 2
 #define TOTAL_THREADS CONSUMERS + PRODUCERS
-#define PRODUCTIONS 3
+#define PRODUCTIONS 10000
 #define TRUE 1
 
 // Array of critical sections
@@ -244,6 +244,7 @@ int main()
     {
         pthread_join(prod_threads[i], NULL);
     }
+    // Deleting the semaphores
     semctl(semaphores, 0, IPC_RMID, 0);
     for (int i = 0; i < PRODUCERS; i++)
     {

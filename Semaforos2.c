@@ -20,7 +20,7 @@ char seccion[3][6]={{"0"},{"0"}};
 
 void main(){
 	printf("Numero de producciones:");
-	scanf("%i",&producciones);
+	scanf("%d",&producciones);
 	int indice=0;//Posicion del arreglo abc a escribir
 	key_t semKey;
 	if(semKey = ftok("/tmp", 1)== (key_t)-1){//Creacion de llaves
