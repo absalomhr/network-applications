@@ -89,6 +89,7 @@ class EventHandler(pyinotify.ProcessEvent):
         return
 
     def process_IN_CLOSE_WRITE(self, event):
+        global server_action
         if server_action:
             print("Ignoring incoming action")
             return
@@ -126,22 +127,6 @@ def thread_notify(s):
     # Loop forever and handle events.
     notifier.loop()
 
-def create_file_from_server(c):
-    c.send(str(CONFIRM).encode('utf8'))
-    fname = c.recv(BUFFER_SIZE).decode("utf8")
-    s_files = [f for f in listdir(PATH) if isfile(join(PATH, f))]
-    if fname in s_files:
-        os.remove(PATH+fname)
-    c.send(str(CONFIRM).encode('utf8'))
-    receive_file(fname, c)
-    # Sending petition to other clients
-    for k in con_dict.keys():
-        if k == addr:
-            continue
-        c2 = con_dict[k]
-        c2.send(str(CREATE).encode('utf8'))
-    return
-
 def delete_file_from_server(c):
     c.send(str(CONFIRM).encode('utf8'))
     fname = c.recv(BUFFER_SIZE).decode("utf8")
@@ -152,16 +137,29 @@ def delete_file_from_server(c):
     server_action = False
     return
 
+def create_file_from_server(c):
+    c.send(str(CONFIRM).encode('utf8'))
+    fname = c.recv(BUFFER_SIZE).decode("utf8")
+    c_files = [f for f in listdir(PATH) if isfile(join(PATH, f))]
+    if fname in c_files:
+        os.remove(PATH+fname)
+    c.send(str(CONFIRM).encode('utf8'))
+    receive_file(fname, c)
+    global server_action
+    print("created file from server", fname)
+    server_action = False
+    return
+
 # Functions
 def listen_to_server(c_send, addr):
+    global server_action
     while True:
         opt = int(c_send.recv(BUFFER_SIZE).decode("utf8"))
         if opt == CREATE:
-            global server_action
             server_action = True
             print("creating from server")
+            create_file_from_server(c_send)
         elif opt == DELETE:
-            global server_action
             server_action = True
             print("deleting from server")
             delete_file_from_server(c_send)

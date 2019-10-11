@@ -62,6 +62,10 @@ def create_file(c, addr):
             continue
         c2 = con_dict[k]
         c2.send(str(CREATE).encode('utf8'))
+        int(c2.recv(BUFFER_SIZE).decode("utf8"))
+        c2.send(fname.encode('utf8'))
+        int(c2.recv(BUFFER_SIZE).decode("utf8"))
+        send_file(fname, c2)
     return
 
 def delete_file(c, addr):
@@ -110,6 +114,7 @@ def init_server(c):
 
 
 def client_thread (c, addr):
+    global n_cons
     cport = n_cons + PORT
     c.send(str(cport).encode('utf8'))
     opt = int(c.recv(BUFFER_SIZE).decode("utf8"))
