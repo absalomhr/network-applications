@@ -75,7 +75,9 @@ class EventHandler(pyinotify.ProcessEvent):
         return
 
     def process_IN_DELETE(self, event):
-        while server_action:
+        global server_action
+        if server_action:
+            print("Ignoring incoming action")
             return
         fname = event.name
         print("Deleting", fname)
@@ -87,7 +89,8 @@ class EventHandler(pyinotify.ProcessEvent):
         return
 
     def process_IN_CLOSE_WRITE(self, event):
-        while server_action:
+        if server_action:
+            print("Ignoring incoming action")
             return
         fname = event.name
         if self.creating:
@@ -123,11 +126,45 @@ def thread_notify(s):
     # Loop forever and handle events.
     notifier.loop()
 
+def create_file_from_server(c):
+    c.send(str(CONFIRM).encode('utf8'))
+    fname = c.recv(BUFFER_SIZE).decode("utf8")
+    s_files = [f for f in listdir(PATH) if isfile(join(PATH, f))]
+    if fname in s_files:
+        os.remove(PATH+fname)
+    c.send(str(CONFIRM).encode('utf8'))
+    receive_file(fname, c)
+    # Sending petition to other clients
+    for k in con_dict.keys():
+        if k == addr:
+            continue
+        c2 = con_dict[k]
+        c2.send(str(CREATE).encode('utf8'))
+    return
+
+def delete_file_from_server(c):
+    c.send(str(CONFIRM).encode('utf8'))
+    fname = c.recv(BUFFER_SIZE).decode("utf8")
+    os.remove(PATH+fname)
+    c.send(str(CONFIRM).encode('utf8'))
+    global server_action
+    print("delete from server complete", fname)
+    server_action = False
+    return
+
 # Functions
 def listen_to_server(c_send, addr):
     while True:
         opt = int(c_send.recv(BUFFER_SIZE).decode("utf8"))
-        print("Im receiving", opt)
+        if opt == CREATE:
+            global server_action
+            server_action = True
+            print("creating from server")
+        elif opt == DELETE:
+            global server_action
+            server_action = True
+            print("deleting from server")
+            delete_file_from_server(c_send)
 
 def init_client(s):
     s.send(str(CONFIRM).encode('utf8'))
@@ -142,6 +179,7 @@ def init_client(s):
         s.send(str(CONFIRM).encode('utf8'))
         fname = s.recv(BUFFER_SIZE).decode("utf8")
         receive_file(fname, s)
+    print("Files received from server")
 
 # Connecting to the server
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

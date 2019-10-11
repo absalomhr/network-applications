@@ -48,7 +48,7 @@ def receive_file(fname, s):
     f.close()
     return
 
-def create_file(c):
+def create_file(c, addr):
     c.send(str(CONFIRM).encode('utf8'))
     fname = c.recv(BUFFER_SIZE).decode("utf8")
     s_files = [f for f in listdir(PATH) if isfile(join(PATH, f))]
@@ -56,22 +56,37 @@ def create_file(c):
         os.remove(PATH+fname)
     c.send(str(CONFIRM).encode('utf8'))
     receive_file(fname, c)
+    # Sending petition to other clients
+    for k in con_dict.keys():
+        if k == addr:
+            continue
+        c2 = con_dict[k]
+        c2.send(str(CREATE).encode('utf8'))
     return
 
-def delete_file(c):
+def delete_file(c, addr):
     c.send(str(CONFIRM).encode('utf8'))
     fname = c.recv(BUFFER_SIZE).decode("utf8")
     os.remove(PATH+fname)
     c.send(str(CONFIRM).encode('utf8'))
+    # Sending petition to other clients
+    for k in con_dict.keys():
+        if k == addr:
+            continue
+        c2 = con_dict[k]
+        c2.send(str(DELETE).encode('utf8'))
+        int(c2.recv(BUFFER_SIZE).decode("utf8"))
+        c2.send(fname.encode('utf8'))
+        int(c2.recv(BUFFER_SIZE).decode("utf8"))
     return
 
 def listen_to_client(c, addr):
     while True:
         opt = int(c.recv(BUFFER_SIZE).decode("utf8"))
         if opt == CREATE:
-            create_file(c)
+            create_file(c, addr)
         elif opt == DELETE:
-            delete_file(c)
+            delete_file(c, addr)
 
 def init_server(c):
     int(c.recv(BUFFER_SIZE).decode("utf8"))
