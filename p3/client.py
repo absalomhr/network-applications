@@ -2,9 +2,12 @@ import socket
 import pickle
 from os import listdir
 from os.path import isfile, join
+import os
 import pyinotify
 import traceback
 from threading import Thread
+import math
+import time
 
 S_IP = "127.0.0.1"
 S_PORT = 1234
@@ -13,7 +16,7 @@ PATH = "./client"
 CONFIRM = 10
 EOF = 15
 DELETE = 20
-PAUSE = 25
+CREATE = 25
 
 # Crear
 # IN_CREATE (touch, copiar y pegar, crear desde sublime)
@@ -26,17 +29,17 @@ PAUSE = 25
 
 class EventHandler(pyinotify.ProcessEvent):
     def __init__(self, s):
-        self.creando = False
-        self.arch_creando = ""
+        self.creating = False
         self.s = s
 
     def process_IN_CREATE(self, event):
-        print ("Creating:", event.pathname)
-        self.creando = True
+        print ("Creating:", event.name)
+        self.creating = True
 
     def process_IN_MOVED_TO(self, event):
-        print ("Creating:", event.pathname)
-        print ("Mandando creacion:", event.pathname)
+        print ("Creating:", event.name)
+        self.creating = True
+        self.process_IN_CLOSE_WRITE(event)
 
     def process_IN_MOVED_FROM(self, event):
         print("Delete: moved from")
@@ -61,10 +64,31 @@ class EventHandler(pyinotify.ProcessEvent):
         return
 
     def process_IN_CLOSE_WRITE(self, event):
-        if self.creando:
-            print ("Mandando creación:", event.pathname)
-            return
-        print("Mandando modificacion")
+        time.sleep(1)
+        if self.creating:
+            print ("sending new file:", event.name)
+        print ("updating file:", event.name)
+        self.s.send(str(CREATE).encode('utf8'))
+        int(self.s.recv(BUFFER_SIZE).decode("utf8"))
+        fname = event.name
+        print(fname)
+        self.s.send(fname.encode('utf8'))
+        int(self.s.recv(BUFFER_SIZE).decode("utf8"))
+        # sending file
+        n_bytes = os.path.getsize(PATH+"/"+fname)
+        n_chunks = n_bytes / BUFFER_SIZE
+        n_chunks = math.ceil(n_chunks)
+        f = open(PATH+"/"+fname, "rb")
+        self.s.send(str(n_chunks).encode('utf8'))
+        int(self.s.recv(BUFFER_SIZE).decode("utf8"))
+        for i in range(n_chunks):
+            data = f.read(BUFFER_SIZE)
+            self.s.send(data)
+            int(self.s.recv(BUFFER_SIZE).decode("utf8"))
+        f.close()
+        self.creating = False
+        print("file sent", fname)
+        return
 
 def thread_notify(s):
     print("Creating notify")

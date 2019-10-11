@@ -16,7 +16,7 @@ PATH = "./drive"
 CONFIRM = 10
 EOF = 15
 DELETE = 20
-PAUSE = 25
+CREATE = 25
 
 def init (c):
     opt = 0
@@ -31,7 +31,7 @@ def init (c):
     n = len(files_to_send)
     c.send(str(n).encode('utf8'))
     if n == 0:
-        print("Zero files")
+        #print("Zero files")
         return
     for i in range(n):
         int(c.recv(BUFFER_SIZE).decode("utf8"))
@@ -58,6 +58,23 @@ def delete_file(c):
     c.send(str(CONFIRM).encode('utf8'))
     return
 
+def create_file(c):
+    c.send(str(CONFIRM).encode('utf8'))
+    fname = c.recv(BUFFER_SIZE).decode("utf8")
+    s_files = [f for f in listdir(PATH) if isfile(join(PATH, f))]
+    if fname in s_files:
+        os.remove(PATH+"/"+fname)
+    c.send(str(CONFIRM).encode('utf8'))
+    n_chunks = int(c.recv(BUFFER_SIZE).decode("utf8"))
+    f = open(PATH+"/"+fname, 'wb')
+    c.send(str(CONFIRM).encode('utf8'))
+    for i in range(n_chunks):
+        data = c.recv(BUFFER_SIZE)
+        f.write(data)
+        c.send(str(CONFIRM).encode('utf8'))
+    f.close()
+    return
+
 def client_thread(conn, addr):
     ip = str(addr[0]); port = str(addr[1])
     print("CLIENT:", ip, port)
@@ -66,6 +83,8 @@ def client_thread(conn, addr):
         opt = int(conn.recv(BUFFER_SIZE).decode("utf8"))
         if opt == DELETE:
             delete_file(conn)
+        elif opt == CREATE:
+            create_file(conn)
     return
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
