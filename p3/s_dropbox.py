@@ -8,8 +8,9 @@ import math
 import pickle
 
 # Constants
-IP = "127.0.0.1"
-PORT = 1234
+# IP = "127.0.0.1"
+IP = "192.168.43.96"
+PORT = 8080
 BUFFER_SIZE = 1024
 PATH = "./drive/"
 CONFIRM = 0
@@ -121,6 +122,7 @@ def client_thread (c, addr):
     if opt == CONFIRM:
         # Connecting to the client again
         c_rec = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print(addr)
         c_rec.connect((addr[0], cport))
         con_dict[addr] = c_rec
         c.send(str(INIT).encode('utf8'))

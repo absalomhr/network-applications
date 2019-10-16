@@ -11,7 +11,8 @@ import pickle
 
 # Constants
 IP = "127.0.0.1"
-PORT = 1234
+MYIP = "127.0.0.1"
+PORT = 8080
 BUFFER_SIZE = 1024
 PATH = "./client/"
 CONFIRM = 0
@@ -93,6 +94,7 @@ class EventHandler(pyinotify.ProcessEvent):
         if server_action:
             print("Ignoring incoming action")
             return
+        time.sleep(1.5)
         fname = event.name
         if self.creating:
             print ("Sending new file:", fname)
@@ -189,7 +191,7 @@ print("Port received", myport)
 mys = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 mys.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 print("My server socket created")
-mys.bind((IP, myport))
+mys.bind((MYIP, myport))
 print("Binding done")
 mys.listen(3)
 print("Listening...")
